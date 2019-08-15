@@ -28,7 +28,6 @@ class VisualCeption extends CodeceptionModule
         'currentImageDir' => 'debug/visual/',
         'report' => false,
         'module' => 'WebDriver',
-        'fullScreenShot' => false
     ];
     
     protected $saveCurrentImageIfFailure;
@@ -153,17 +152,19 @@ class VisualCeption extends CodeceptionModule
 	}
 
     /**
-     * Compare the reference image with a current screenshot, identified by their indentifier name
+     * Compare the reference image with a current screenshot, identified by their indentifier name (fullscreenshot mode off)
      * and their element ID.
      *
      * @param string $identifier Identifies your test object
      * @param string $elementID DOM ID of the element, which should be screenshotted
      * @param string|array $excludeElements Element name or array of Element names, which should not appear in the screenshot
-     * @param float $deviation 
+     * @param float $deviation
+     * @param bool $seeChanges
+     * @param bool $fullScreenshot
      */
     public function seeVisualChanges($identifier, $elementID = null, $excludeElements = array(), $deviation = null)
     {
-        $this->compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, true);
+        $this->compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, true, false);
 
         // used for assertion counter in codeception / phpunit
         $this->assertTrue(true);
@@ -171,29 +172,77 @@ class VisualCeption extends CodeceptionModule
     }
 
     /**
-     * Compare the reference image with a current screenshot, identified by their indentifier name
+     * Compare the reference image with a current screenshot, identified by their indentifier name (fullscreenshot mode off)
      * and their element ID.
      *
      * @param string $identifier identifies your test object
      * @param string $elementID DOM ID of the element, which should be screenshotted
      * @param string|array $excludeElements string of Element name or array of Element names, which should not appear in the screenshot
-     * @param float $deviation 
+     * @param float $deviation
+     * @param bool $seeChanges
      */
     public function dontSeeVisualChanges($identifier, $elementID = null, $excludeElements = array(), $deviation = null)
     {
-        $this->compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, false);
+        $this->compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, false, false);
 
         // used for assertion counter in codeception / phpunit
         $this->assertTrue(true);
     }
 
-    private function compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, $seeChanges)
+	/**
+	 * Compare the reference image with a current screenshot, identified by their indentifier name (fullscreenshot mode on)
+	 * and their element ID.
+	 *
+	 * @param string $identifier Identifies your test object
+	 * @param string $elementID DOM ID of the element, which should be screenshotted
+	 * @param string|array $excludeElements Element name or array of Element names, which should not appear in the screenshot
+	 * @param float $deviation
+	 * @param bool $seeChanges
+	 * @param bool $fullScreenshot
+	 */
+	public function seeFullVisualChanges($identifier, $elementID = null, $excludeElements = array(), $deviation = null)
+	{
+		$this->compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, true, true);
+
+		// used for assertion counter in codeception / phpunit
+		$this->assertTrue(true);
+
+	}
+
+	/**
+	 * Compare the reference image with a current screenshot, identified by their indentifier name (fullscreenshot mode on)
+	 * and their element ID.
+	 *
+	 * @param string $identifier identifies your test object
+	 * @param string $elementID DOM ID of the element, which should be screenshotted
+	 * @param string|array $excludeElements string of Element name or array of Element names, which should not appear in the screenshot
+	 * @param float $deviation
+	 * @param bool $seeChanges
+	 */
+	public function dontSeeFullVisualChanges($identifier, $elementID = null, $excludeElements = array(), $deviation = null)
+	{
+		$this->compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, false, true);
+
+		// used for assertion counter in codeception / phpunit
+		$this->assertTrue(true);
+	}
+
+	/**
+	 * @param $identifier
+	 * @param $elementID
+	 * @param $excludeElements
+	 * @param $deviation
+	 * @param $seeChanges
+	 * @param $fullScreenshot
+	 * @throws ImageDeviationException
+	 */
+    private function compareVisualChanges($identifier, $elementID, $excludeElements, $deviation, $seeChanges, $fullScreenshot)
     {
         $excludeElements = (array) $excludeElements;
 
         $maximumDeviation = (!$deviation && !is_numeric($deviation)) ? $this->maximumDeviation : (float) $deviation;
 
-        $deviationResult = $this->getDeviation($identifier, $elementID, $excludeElements);
+        $deviationResult = $this->getDeviation($identifier, $elementID, $excludeElements, $fullScreenshot);
 
         if (is_null($deviationResult["deviationImage"])) {
             return;
@@ -268,12 +317,13 @@ class VisualCeption extends CodeceptionModule
      * @param string $identifier Identifies your test object
      * @param string $elementID DOM ID of the element, which should be screenshotted
      * @param array $excludeElements Element names, which should not appear in the screenshot
+     * @param bool $fullScreenshot Full screenshot flag (false by default)
      * @return array Includes the calculation of deviation in percent and the diff-image
      */
-    private function getDeviation($identifier, $elementID, array $excludeElements = array())
+    private function getDeviation($identifier, $elementID, array $excludeElements = array(), $fullScreenshot = false)
     {
         $coords = $this->getCoordinates($elementID);
-        $this->createScreenshot($identifier, $coords, $excludeElements);
+        $this->createScreenshot($identifier, $coords, $excludeElements, $fullScreenshot);
 
         $compareResult = $this->compare($identifier);
 
@@ -377,9 +427,10 @@ class VisualCeption extends CodeceptionModule
      * @param string $identifier identifies your test object
      * @param array $coords Coordinates where the DOM element is located
      * @param array $excludeElements List of elements, which should not appear in the screenshot
+     * @param bool $fullScreenshot Full screenshot flag (false by default)
      * @return string Path of the current screenshot image
      */
-    private function createScreenshot($identifier, array $coords, array $excludeElements = array())
+    private function createScreenshot($identifier, array $coords, array $excludeElements = array(), $fullScreenshot = false)
     {
         $screenShotDir = \Codeception\Configuration::logDir() . 'debug/';
 
@@ -390,11 +441,10 @@ class VisualCeption extends CodeceptionModule
         $elementPath = $this->getScreenshotPath($identifier);
         $screenShotImage = new \Imagick();
 
-        if ($this->config["fullScreenShot"] == true) {
+        if ($fullScreenshot === true) {
 	        $this->hideElementsForScreenshot($excludeElements);
 	        $height = $this->webDriver->executeScript("var ele=document.querySelector('html'); return ele.scrollHeight;");
             list($viewportHeight, $devicePixelRatio) = $this->webDriver->executeScript("return [window.innerHeight, window.devicePixelRatio]");
-
             $itr = $height / $viewportHeight;
 
             for ($i = 0; $i < intval($itr); $i++) {

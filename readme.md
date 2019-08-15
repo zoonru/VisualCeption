@@ -57,7 +57,6 @@ modules:
         - VisualCeption:
             maximumDeviation: 5                                   # deviation in percent
             saveCurrentImageIfFailure: true                       # if true, VisualCeption saves the current
-            fullScreenShot: true                                  # fullpage screenshot
 ```
 
 * **referenceImageDir** (default: `'VisualCeption/'`) VisualCeption uses an "old" image for calculating the deviation. These images have to be stored in data directory (tests/_data) or be relative to it.
@@ -66,19 +65,22 @@ modules:
 * **saveCurrentImageIfFailure** (default: `true`) When the test fails, the current image will be saved too, so it's easier to change the reference image with this one. The image will appear beside the compare image with the prefix "current."
 * **report** (default: `false`) When enabled an HTML report with diffs for failing tests is generated. Report is stored in `tests/_output/vcresult.html`.
 * **module** (default: `'WebDriver'`) module responsible for browser interaction, default: WebDriver.
-* **fullScreenShot** (default: `false`) fullpage screenshot for Chrome and Firefox
 
 ## Usage
 
-VisualCeption is really easy to use. There are only two methods that will be added to $I <code>seeVisualChanges</code> and <code>dontSeeVisualChanges</code>.
+VisualCeption is really easy to use. There are only 4 methods that will be added to $I:
+- <code>seeVisualChanges</code>  
+- <code>dontSeeVisualChanges</code>
+- <code>seeFullVisualChanges</code>  
+- <code>dontSeeFullVisualChanges</code>
 
 ```php
 $I->seeVisualChanges("uniqueIdentifier1", "elementId1");
 $I->dontSeeVisualChanges("uniqueIdentifier2", "elementId2");
-
-$I->dontSeeVisualChanges("uniqueIdentifier3", "elementId3", array("excludeElement1", "excludeElement2"));
-
-$I->dontSeeVisualChanges("uniqueIdentifier3", "elementId3", array("excludeElement1", "excludeElement2"), $deviation]);
+$I->dontSeeVisualChanges("uniqueIdentifier3", "elementId3", ["excludeElement1", "excludeElement2"]);
+$I->dontSeeVisualChanges("uniqueIdentifier3", "elementId3", ["excludeElement1", "excludeElement2"], $deviation]);
+$I->seeFullVisualChanges("uniqueIdentifier1", "elementId1");
+$I->dontSeeFullVisualChanges("uniqueIdentifier2", "elementId2");
 ```
 
 * **uniqueIdentifier** For comparing the images it is important to have a stable name. This is the corresponding name.
@@ -89,7 +91,7 @@ $I->dontSeeVisualChanges("uniqueIdentifier3", "elementId3", array("excludeElemen
 **Example Usage**
 ```php
 $I->seeVisualChanges( "subNavigation", "#subNav" );
-$I->dontSeeVisualChanges("content", "div.content", array("#intro"));
+$I->dontSeeFullVisualChanges("content", "div.content", ["#intro"]);
 ```
 
 If you need more information about the test run please use the command line debug option (-d or --debug).
