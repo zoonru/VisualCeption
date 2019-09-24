@@ -21,7 +21,9 @@ use Codeception\TestInterface;
  */
 class VisualCeption extends CodeceptionModule
 {
-    protected $config = [
+	const ZOON_HEADER_HEIGHT = 80;
+
+	protected $config = [
         'maximumDeviation' => 0,
         'saveCurrentImageIfFailure' => true,
         'referenceImageDir' => 'VisualCeption/',
@@ -118,7 +120,6 @@ class VisualCeption extends CodeceptionModule
             $this->failed[Descriptor::getTestSignatureUnique($test) . '.' . $fail->getIdentifier()] = $fail;
         }
     }
-
 
     /**
      * Event hook before a test starts
@@ -322,6 +323,9 @@ class VisualCeption extends CodeceptionModule
      */
     private function getDeviation($identifier, $elementID, array $excludeElements = array(), $fullScreenshot = false)
     {
+    	if (!$fullScreenshot) {
+		    $this->webDriverModule->scrollTo($elementID, 0, -(self::ZOON_HEADER_HEIGHT * 2));
+	    }
         $coords = $this->getCoordinates($elementID);
         $this->createScreenshot($identifier, $coords, $excludeElements, $fullScreenshot);
 
@@ -421,6 +425,14 @@ class VisualCeption extends CodeceptionModule
         return $this->referenceImageDir . $this->getScreenshotName($identifier);
     }
 
+	/**
+	 * Scroll to top of the page
+	 */
+    private function scrollToTop()
+    {
+	    $this->webDriver->executeScript("window.scrollTo(0, 0);");
+    }
+
     /**
      * Generate the screenshot of the dom element
      *
@@ -442,6 +454,7 @@ class VisualCeption extends CodeceptionModule
         $screenShotImage = new \Imagick();
 
         if ($fullScreenshot === true) {
+        	$this->scrollToTop();
 	        $this->hideElementsForScreenshot($excludeElements);
 	        $height = $this->webDriver->executeScript("var ele=document.querySelector('html'); return ele.scrollHeight;");
             list($viewportHeight, $devicePixelRatio) = $this->webDriver->executeScript("return [window.innerHeight, window.devicePixelRatio]");
@@ -461,7 +474,6 @@ class VisualCeption extends CodeceptionModule
             $screenShotImage->resetIterator();
             $fullShot = $screenShotImage->appendImages(true);
             $fullShot->writeImage($elementPath);
-
         } else {
             $this->hideElementsForScreenshot($excludeElements);
             $screenshotBinary = $this->webDriver->takeScreenshot();
@@ -472,6 +484,7 @@ class VisualCeption extends CodeceptionModule
             $screenShotImage->writeImage($elementPath);
         }
 
+	    $this->scrollToTop();
         return $elementPath;
     }
 
